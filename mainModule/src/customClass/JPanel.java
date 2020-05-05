@@ -12,7 +12,10 @@ public class JPanel extends javax.swing.JPanel {
 
         out.setBorder(new EmptyBorder(insets));
         out.setLayout(new BoxLayout(out, axis));
-        Arrays.asList(components).forEach(out::add);
+        for (JComponent jComponent : Arrays.asList(components)) {
+            out.add(jComponent);
+            out.add(Box.createHorizontalStrut(5));
+        }
 
         return out;
     }
