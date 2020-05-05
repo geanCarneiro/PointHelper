@@ -1,6 +1,5 @@
 package main;
 
-import  customClass.*;
 import views.Principal;
 
 public class Main {
