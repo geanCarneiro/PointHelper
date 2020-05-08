@@ -4,14 +4,19 @@ import customClass.*;
 import customClass.JButton;
 import customClass.JFrame;
 import customClass.JPanel;
+import main.Main;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
-import java.awt.event.ActionEvent;
+import java.awt.event.*;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Scanner;
 
 public class Principal extends JFrame {
 
@@ -21,7 +26,7 @@ public class Principal extends JFrame {
     private JTextField txtFimExp;
 
     public Principal() {
-        super("PointHelper", true);
+        super("PointHelper", false);
         this.addComponent(JPanel.createPanel(BoxLayout.Y_AXIS, new Insets(10, 10, 10, 10),
                 JPanel.createPanel(BoxLayout.X_AXIS, new Insets(0, 0, 5, 0),
                         new JLabel("inicio do expediente: "),
@@ -30,19 +35,19 @@ public class Principal extends JFrame {
                         new JButton("Copiar", getCopyText(this.txtInicioExp))
                     ),
                 JPanel.createPanel(BoxLayout.X_AXIS, new Insets(0, 0, 5, 0),
-                        new JLabel("inicio do almoço: "),
+                        new JLabel(" ".repeat(7) + "inicio do almoço: "),
                         this.txtInicioAlm = new JTextField(10),
                         new JButton("Set", getSetTime(this.txtInicioAlm)),
                         new JButton("Copiar", getCopyText(this.txtInicioAlm))
                     ),
                 JPanel.createPanel(BoxLayout.X_AXIS, new Insets(0, 0, 5, 0),
-                        new JLabel("fim do almoço: "),
+                        new JLabel(" ".repeat(11) + "fim do almoço: "),
                         this.txtFimAlm = new JTextField(10),
                         new JButton("Set", getSetTime(this.txtFimAlm)),
                         new JButton("Copiar", getCopyText(this.txtFimAlm))
                     ),
                 JPanel.createPanel(BoxLayout.X_AXIS, new Insets(0, 0, 5, 0),
-                        new JLabel("fim do expediente: "),
+                        new JLabel(" ".repeat(4) + "fim do expediente: "),
                         this.txtFimExp = new JTextField(10),
                         new JButton("Set", getSetTime(this.txtFimExp)),
                         new JButton("Copiar", getCopyText(this.txtFimExp))
@@ -51,6 +56,89 @@ public class Principal extends JFrame {
                         new JButton("Copiar Explicação", getInfoPonto())
                 )
             ));
+        this.addWindowListener(this.getWindowListener());
+        this.txtInicioExp.addFocusListener(this.getFocusListener());
+        this.loadBackup();
+    }
+
+    private FocusListener getFocusListener(){
+        return new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                saveInfos();
+            }
+        };
+    }
+
+    private WindowListener getWindowListener() {
+        return new WindowListener() {
+            @Override
+            public void windowOpened(WindowEvent e) {
+
+            }
+
+            @Override
+            public void windowClosing(WindowEvent e) {
+                int opt = JOptionPane.showConfirmDialog(null, "Tem certeza que deseja fechar?", "ATENÇÃO", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                if(opt == JOptionPane.YES_OPTION) {
+                    Main.BACKUP.delete();
+                    System.exit(0);
+                }
+            }
+
+            @Override
+            public void windowClosed(WindowEvent e) {
+
+            }
+
+            @Override
+            public void windowIconified(WindowEvent e) {
+
+            }
+
+            @Override
+            public void windowDeiconified(WindowEvent e) {
+
+            }
+
+            @Override
+            public void windowActivated(WindowEvent e) {
+
+            }
+
+            @Override
+            public void windowDeactivated(WindowEvent e) {
+
+            }
+        };
+    }
+
+    private void loadBackup(){
+        try (Scanner scan = new Scanner(Main.BACKUP)) {
+            String[] infos = scan.nextLine().split(";");
+            if(infos.length > 0) this.txtInicioExp.setText(infos[0]);
+            if(infos.length > 1) this.txtInicioAlm.setText(infos[1]);
+            if(infos.length > 2) this.txtFimAlm.setText(infos[2]);
+            if(infos.length > 3) this.txtFimExp.setText(infos[3]);
+        } catch (FileNotFoundException e) {
+            this.saveInfos();
+        }
+    }
+
+    private void saveInfos(){
+        try (FileWriter writer = new FileWriter(Main.BACKUP)){
+            writer.write(this.txtInicioExp.getText() + ";"
+                        + this.txtInicioAlm.getText() + ";"
+                        + this.txtFimAlm.getText() + ";"
+                        + this.txtFimExp.getText());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private Action getInfoPonto(){
@@ -58,10 +146,13 @@ public class Principal extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 int largura = 25;
-                copiarString(setLengthToString("Inicio do Expediente", largura) + txtInicioExp.getText() + "\n" +
-                             setLengthToString("Inicio do Almoço", largura) + txtInicioAlm.getText() + "\n" +
-                             setLengthToString("Fim do Almoço", largura) + txtFimAlm.getText() + "\n" +
-                             setLengthToString("Fim do Expediente", largura) + txtFimExp.getText());
+                String info = setLengthToString("Inicio do Expediente", largura) + txtInicioExp.getText() + "\n";
+                if(!txtInicioAlm.getText().isBlank()){
+                    info += setLengthToString("Inicio do Almoço", largura) + txtInicioAlm.getText() + "\n" +
+                            setLengthToString("Fim do Almoço", largura) + txtFimAlm.getText() + "\n";
+                }
+                info += setLengthToString("Fim do Expediente", largura) + txtFimExp.getText();
+                copiarString(info);
             }
         };
     }
@@ -79,6 +170,7 @@ public class Principal extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 target.setText(new SimpleDateFormat("HH:mm").format(new Date()));
+                saveInfos();
             }
         };
     }
