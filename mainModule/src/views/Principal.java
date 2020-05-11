@@ -106,7 +106,7 @@ public class Principal extends JFrame {
 
             @Override
             public void windowIconified(WindowEvent e) {
-                Main.BACKUP.delete();
+                saveInfos();
             }
 
             @Override
@@ -121,7 +121,7 @@ public class Principal extends JFrame {
 
             @Override
             public void windowDeactivated(WindowEvent e) {
-                Main.BACKUP.delete();
+                saveInfos();
             }
         };
     }
