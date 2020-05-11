@@ -35,19 +35,19 @@ public class Principal extends JFrame {
                         new JButton("Copiar", getCopyText(this.txtInicioExp))
                     ),
                 JPanel.createPanel(BoxLayout.X_AXIS, new Insets(0, 0, 5, 0),
-                        new JLabel(" ".repeat(7) + "inicio do almoço: "),
+                        new JLabel(this.repeat(" ", 7) + "inicio do almoço: "),
                         this.txtInicioAlm = new JTextField(10),
                         new JButton("Set", getSetTime(this.txtInicioAlm)),
                         new JButton("Copiar", getCopyText(this.txtInicioAlm))
                     ),
                 JPanel.createPanel(BoxLayout.X_AXIS, new Insets(0, 0, 5, 0),
-                        new JLabel(" ".repeat(11) + "fim do almoço: "),
+                        new JLabel(this.repeat(" ", 11) + "fim do almoço: "),
                         this.txtFimAlm = new JTextField(10),
                         new JButton("Set", getSetTime(this.txtFimAlm)),
                         new JButton("Copiar", getCopyText(this.txtFimAlm))
                     ),
                 JPanel.createPanel(BoxLayout.X_AXIS, new Insets(0, 0, 5, 0),
-                        new JLabel(" ".repeat(4) + "fim do expediente: "),
+                        new JLabel(this.repeat(" ", 4) + "fim do expediente: "),
                         this.txtFimExp = new JTextField(10),
                         new JButton("Set", getSetTime(this.txtFimExp)),
                         new JButton("Copiar", getCopyText(this.txtFimExp))
@@ -59,6 +59,14 @@ public class Principal extends JFrame {
         this.addWindowListener(this.getWindowListener());
         this.txtInicioExp.addFocusListener(this.getFocusListener());
         this.loadBackup();
+    }
+
+    private String repeat(String str, int qt){
+        StringBuilder builder = new StringBuilder();
+        for(int i = 0; i < qt; i++){
+            builder.append(str);
+        }
+        return builder.toString();
     }
 
     private FocusListener getFocusListener(){
@@ -98,7 +106,7 @@ public class Principal extends JFrame {
 
             @Override
             public void windowIconified(WindowEvent e) {
-
+                Main.BACKUP.delete();
             }
 
             @Override
@@ -113,7 +121,7 @@ public class Principal extends JFrame {
 
             @Override
             public void windowDeactivated(WindowEvent e) {
-
+                Main.BACKUP.delete();
             }
         };
     }
@@ -147,7 +155,7 @@ public class Principal extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 int largura = 25;
                 String info = setLengthToString("Inicio do Expediente", largura) + txtInicioExp.getText() + "\n";
-                if(!txtInicioAlm.getText().isBlank()){
+                if(!txtInicioAlm.getText().trim().isEmpty()){
                     info += setLengthToString("Inicio do Almoço", largura) + txtInicioAlm.getText() + "\n" +
                             setLengthToString("Fim do Almoço", largura) + txtFimAlm.getText() + "\n";
                 }
@@ -160,7 +168,7 @@ public class Principal extends JFrame {
     private String setLengthToString(String str, int length){
 
         if(str.length() < length)
-            str += " ".repeat(length - str.length());
+            str += this.repeat(" ", length - str.length());
 
         return str;
     }
