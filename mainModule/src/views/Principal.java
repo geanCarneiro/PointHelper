@@ -1,9 +1,11 @@
 package views;
 
-import customClass.*;
 import customClass.JButton;
 import customClass.JFrame;
 import customClass.JPanel;
+import customClass.JLabel;
+import customClass.JTextField;
+import customClass.JFormattedTextField;
 import main.Main;
 
 import javax.swing.*;
@@ -14,59 +16,116 @@ import java.awt.event.*;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Scanner;
 
 public class Principal extends JFrame {
 
-    private JTextField txtInicioExp;
-    private JTextField txtInicioAlm;
-    private JTextField txtFimAlm;
-    private JTextField txtFimExp;
+    private JFormattedTextField txtInicioExp;
+    private JFormattedTextField txtInicioAlm;
+    private JFormattedTextField txtFimAlm;
+    private JFormattedTextField txtFimExp;
+
 
     public Principal() {
         super("PointHelper", false);
+
+        this.txtInicioExp = new JFormattedTextField(getFocusListener(), Main.TIMEMASK);
+        this.txtInicioAlm = new JFormattedTextField(getFocusListener(), Main.TIMEMASK);
+        this.txtFimAlm = new JFormattedTextField(getFocusListener(), Main.TIMEMASK);
+        this.txtFimExp = new JFormattedTextField(getFocusListener(), Main.TIMEMASK);
+
+        JLabel.defaultWidth = 145;
+
+        this.loadBackup();
+
         this.addComponent(JPanel.createPanel(BoxLayout.Y_AXIS, new Insets(10, 10, 10, 10),
                 JPanel.createPanel(BoxLayout.X_AXIS, new Insets(0, 0, 5, 0),
-                        new JLabel("inicio do expediente: "),
-                        this.txtInicioExp = new JTextField(10),
+                        new JLabel("inicio do expediente: ", SwingConstants.RIGHT),
+                        this.txtInicioExp,
                         new JButton("Set", getSetTime(this.txtInicioExp)),
                         new JButton("Copiar", getCopyText(this.txtInicioExp))
                     ),
                 JPanel.createPanel(BoxLayout.X_AXIS, new Insets(0, 0, 5, 0),
-                        new JLabel(this.repeat(" ", 7) + "inicio do almoço: "),
-                        this.txtInicioAlm = new JTextField(10),
+                        new JLabel("inicio do almoço: ", SwingConstants.RIGHT),
+                        this.txtInicioAlm,
                         new JButton("Set", getSetTime(this.txtInicioAlm)),
                         new JButton("Copiar", getCopyText(this.txtInicioAlm))
                     ),
                 JPanel.createPanel(BoxLayout.X_AXIS, new Insets(0, 0, 5, 0),
-                        new JLabel(this.repeat(" ", 11) + "fim do almoço: "),
-                        this.txtFimAlm = new JTextField(10),
+                        new JLabel("fim do almoço: ", SwingConstants.RIGHT),
+                        this.txtFimAlm,
                         new JButton("Set", getSetTime(this.txtFimAlm)),
                         new JButton("Copiar", getCopyText(this.txtFimAlm))
                     ),
                 JPanel.createPanel(BoxLayout.X_AXIS, new Insets(0, 0, 5, 0),
-                        new JLabel(this.repeat(" ", 4) + "fim do expediente: "),
-                        this.txtFimExp = new JTextField(10),
+                        new JLabel("fim do expediente: ", SwingConstants.RIGHT),
+                        this.txtFimExp,
                         new JButton("Set", getSetTime(this.txtFimExp)),
                         new JButton("Copiar", getCopyText(this.txtFimExp))
                     ),
                 JPanel.createPanel(BoxLayout.X_AXIS, new Insets(0, 0, 5, 0),
-                        new JButton("Copiar Explicação", getInfoPonto())
+                        new JButton("Copiar Explicação", getInfoPonto()),
+                        new JButton("Distribuir Horario...", distribuirHorario())
                 )
             ));
         this.addWindowListener(this.getWindowListener());
-        this.txtInicioExp.addFocusListener(this.getFocusListener());
-        this.loadBackup();
     }
 
-    private String repeat(String str, int qt){
-        StringBuilder builder = new StringBuilder();
-        for(int i = 0; i < qt; i++){
-            builder.append(str);
-        }
-        return builder.toString();
+    private Action distribuirHorario() {
+        return new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                LimiteHoraDialog dialog = new LimiteHoraDialog();
+                String limiteHora = dialog.run();
+
+                if (limiteHora == null) return;
+
+                SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm");
+
+                LocalDateTime limite;
+                LocalDateTime inicioExp;
+                LocalDateTime fimExp;
+                try {
+                    limite = dateToLocalDateTime(dateFormat.parse(limiteHora));
+                    inicioExp = dateToLocalDateTime(dateFormat.parse((String) txtInicioExp.getValue()));
+                    fimExp = dateToLocalDateTime(dateFormat.parse((String) txtFimExp.getValue()));
+                } catch (ParseException ex) {
+                    ex.printStackTrace();
+                    return;
+                }
+
+                LocalDateTime duracao = fimExp.minusHours(inicioExp.getHour()).minusMinutes(inicioExp.getMinute());
+
+                if (duracao.isBefore(limite)) return;
+
+                LocalDateTime sobra = duracao.minusHours(limite.getHour()).minusMinutes(limite.getMinute());
+
+                LocalDateTime fimAlm = fimExp.minusHours(limite.getHour()).minusMinutes(limite.getMinute());
+                LocalDateTime inicioAlm = fimAlm.minusHours(Main.DURACAOALMOCO.getHour()).minusMinutes(Main.DURACAOALMOCO.getMinute());
+                inicioExp = inicioAlm.minusHours(sobra.getHour()).minusMinutes(sobra.getMinute());
+
+                txtInicioExp.setText(localDateTimeToString(inicioExp));
+                txtInicioAlm.setText(localDateTimeToString(inicioAlm));
+                txtFimAlm.setText(localDateTimeToString(fimAlm));
+                txtFimExp.setText(localDateTimeToString(fimExp));
+
+            }
+        };
+    }
+
+    private LocalDateTime dateToLocalDateTime(Date date) {
+        return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+    }
+
+    private String localDateTimeToString(LocalDateTime localDateTime){
+        return String.format( "%02d:%02d", localDateTime.getHour(), localDateTime.getMinute() );
     }
 
     private FocusListener getFocusListener(){
@@ -165,15 +224,19 @@ public class Principal extends JFrame {
         };
     }
 
-    private String setLengthToString(String str, int length){
-
-        if(str.length() < length)
-            str += this.repeat(" ", length - str.length());
-
-        return str;
+    private String setLengthToString(String str, int length) {
+        return setLengthToString(str, length, SwingConstants.LEFT);
     }
 
-    private Action getSetTime(JTextField target) {
+    private String setLengthToString(String str, int length, int align){
+
+        if(align == SwingConstants.LEFT)
+            length = -length;
+
+        return String.format("%" + length + "s", str);
+    }
+
+    private  Action getSetTime(JFormattedTextField target) {
         return new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -183,7 +246,7 @@ public class Principal extends JFrame {
         };
     }
 
-    private Action getCopyText(JTextField target) {
+    private Action getCopyText(JFormattedTextField target) {
         return new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
