@@ -69,4 +69,9 @@ public class JFormattedTextField extends javax.swing.JFormattedTextField {
         }
     }
 
+    @Override
+    public String getText() {
+        if(this.getValue() == null) return "";
+        return super.getText();
+    }
 }

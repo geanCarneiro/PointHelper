@@ -9,7 +9,7 @@ public class Main {
 
     public static final File BACKUP = new File("backup.csv");
     public static final String TIMEMASK = "##:##";
-    public static final LocalTime DURACAOALMOCO = LocalTime.of(0, 30);
+    public static final LocalTime DURACAOMINALMOCO = LocalTime.of(0, 30);
     public static final String DEFAULTLIMITEHORA = "06:00";
 
     public static void main(String[] args) {

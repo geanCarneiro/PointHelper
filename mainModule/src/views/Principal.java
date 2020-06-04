@@ -18,6 +18,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -32,6 +33,67 @@ public class Principal extends JFrame {
     private JFormattedTextField txtFimAlm;
     private JFormattedTextField txtFimExp;
 
+    private final Action COPIAREXPLICACAOACTION = new AbstractAction() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            int largura = 25;
+            String info = setLengthToString("Inicio do Expediente", largura) + txtInicioExp.getText() + "\n";
+            System.out.println(txtInicioAlm.getValue());
+            if(txtInicioAlm.getValue() != null){
+                info += setLengthToString("Inicio do Almoço", largura) + txtInicioAlm.getText() + "\n" +
+                        setLengthToString("Fim do Almoço", largura) + txtFimAlm.getText() + "\n";
+            }
+            info += setLengthToString("Fim do Expediente", largura) + txtFimExp.getText();
+            copiarString(info);
+        }
+    };
+
+    private final Action DISTRIBUIRHORARIO = new AbstractAction() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            LimiteHoraDialog dialog = new LimiteHoraDialog();
+            String limiteHora = dialog.run();
+
+            if (limiteHora == null) return;
+
+            SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm");
+
+            LocalDateTime limite;
+            LocalDateTime inicioExp;
+            LocalDateTime inicioAlm;
+            LocalDateTime fimAlm;
+            LocalDateTime fimExp;
+            try {
+                limite = dateToLocalDateTime(dateFormat.parse(limiteHora));
+                inicioExp = dateToLocalDateTime(dateFormat.parse((String) txtInicioExp.getValue()));
+                inicioAlm = (txtInicioAlm.getValue() != null) ? dateToLocalDateTime(dateFormat.parse((String) txtInicioAlm.getValue())) : LocalDateTime.MIN;
+                fimAlm = (txtFimAlm.getValue() != null) ? dateToLocalDateTime(dateFormat.parse((String) txtFimAlm.getValue())) : LocalDateTime.MIN;
+                fimExp = dateToLocalDateTime(dateFormat.parse((String) txtFimExp.getValue()));
+            } catch (ParseException ex) {
+                ex.printStackTrace();
+                return;
+            }
+
+            LocalDateTime duracao = fimExp.minusHours(inicioExp.getHour()).minusMinutes(inicioExp.getMinute());
+            LocalDateTime duracaoAlm = fimAlm.minusHours(inicioAlm.getHour()).minusMinutes(inicioAlm.getMinute());
+
+            duracao.minusHours(duracaoAlm.getHour()).minusMinutes(duracaoAlm.getMinute());
+
+            if (duracao.isBefore(limite)) return;
+
+            LocalDateTime sobra = duracao.minusHours(limite.getHour()).minusMinutes(limite.getMinute());
+
+            fimAlm = fimExp.minusHours(limite.getHour()).minusMinutes(limite.getMinute());
+            inicioAlm = fimAlm.minusHours(Main.DURACAOMINALMOCO.getHour()).minusMinutes(Main.DURACAOMINALMOCO.getMinute());
+            inicioExp = inicioAlm.minusHours(sobra.getHour()).minusMinutes(sobra.getMinute());
+
+            txtInicioExp.setText(localDateTimeToString(inicioExp));
+            txtInicioAlm.setText(localDateTimeToString(inicioAlm));
+            txtFimAlm.setText(localDateTimeToString(fimAlm));
+            txtFimExp.setText(localDateTimeToString(fimExp));
+
+        }
+    };
 
     public Principal() {
         super("PointHelper", false);
@@ -71,53 +133,11 @@ public class Principal extends JFrame {
                         new JButton("Copiar", getCopyText(this.txtFimExp))
                     ),
                 JPanel.createPanel(BoxLayout.X_AXIS, new Insets(0, 0, 5, 0),
-                        new JButton("Copiar Explicação", getInfoPonto()),
-                        new JButton("Distribuir Horario...", distribuirHorario())
+                        new JButton("Copiar Explicação", this.COPIAREXPLICACAOACTION),
+                        new JButton("Distribuir Horario...", this.DISTRIBUIRHORARIO)
                 )
             ));
         this.addWindowListener(this.getWindowListener());
-    }
-
-    private Action distribuirHorario() {
-        return new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                LimiteHoraDialog dialog = new LimiteHoraDialog();
-                String limiteHora = dialog.run();
-
-                if (limiteHora == null) return;
-
-                SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm");
-
-                LocalDateTime limite;
-                LocalDateTime inicioExp;
-                LocalDateTime fimExp;
-                try {
-                    limite = dateToLocalDateTime(dateFormat.parse(limiteHora));
-                    inicioExp = dateToLocalDateTime(dateFormat.parse((String) txtInicioExp.getValue()));
-                    fimExp = dateToLocalDateTime(dateFormat.parse((String) txtFimExp.getValue()));
-                } catch (ParseException ex) {
-                    ex.printStackTrace();
-                    return;
-                }
-
-                LocalDateTime duracao = fimExp.minusHours(inicioExp.getHour()).minusMinutes(inicioExp.getMinute());
-
-                if (duracao.isBefore(limite)) return;
-
-                LocalDateTime sobra = duracao.minusHours(limite.getHour()).minusMinutes(limite.getMinute());
-
-                LocalDateTime fimAlm = fimExp.minusHours(limite.getHour()).minusMinutes(limite.getMinute());
-                LocalDateTime inicioAlm = fimAlm.minusHours(Main.DURACAOALMOCO.getHour()).minusMinutes(Main.DURACAOALMOCO.getMinute());
-                inicioExp = inicioAlm.minusHours(sobra.getHour()).minusMinutes(sobra.getMinute());
-
-                txtInicioExp.setText(localDateTimeToString(inicioExp));
-                txtInicioAlm.setText(localDateTimeToString(inicioAlm));
-                txtFimAlm.setText(localDateTimeToString(fimAlm));
-                txtFimExp.setText(localDateTimeToString(fimExp));
-
-            }
-        };
     }
 
     private LocalDateTime dateToLocalDateTime(Date date) {
@@ -208,22 +228,6 @@ public class Principal extends JFrame {
         }
     }
 
-    private Action getInfoPonto(){
-        return new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                int largura = 25;
-                String info = setLengthToString("Inicio do Expediente", largura) + txtInicioExp.getText() + "\n";
-                if(!txtInicioAlm.getText().trim().isEmpty()){
-                    info += setLengthToString("Inicio do Almoço", largura) + txtInicioAlm.getText() + "\n" +
-                            setLengthToString("Fim do Almoço", largura) + txtFimAlm.getText() + "\n";
-                }
-                info += setLengthToString("Fim do Expediente", largura) + txtFimExp.getText();
-                copiarString(info);
-            }
-        };
-    }
-
     private String setLengthToString(String str, int length) {
         return setLengthToString(str, length, SwingConstants.LEFT);
     }
@@ -240,7 +244,7 @@ public class Principal extends JFrame {
         return new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                target.setText(new SimpleDateFormat("HH:mm").format(new Date()));
+                target.setValue(new SimpleDateFormat("HH:mm").format(new Date()));
                 saveInfos();
             }
         };

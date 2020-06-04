@@ -1,5 +1,6 @@
 package views;
 
+import com.sun.java.swing.action.OkAction;
 import customClass.JButton;
 import customClass.JFormattedTextField;
 import customClass.JLabel;
@@ -15,6 +16,20 @@ public class LimiteHoraDialog extends JDialog {
     private JFormattedTextField input;
     private String output = null;
 
+    private final Action OKACTION = new AbstractAction() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            output = (String) input.getValue();
+            dispose();
+        }
+    };
+    private final Action CANCELARACTION = new AbstractAction() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            dispose();
+        }
+    };
+
     public LimiteHoraDialog() {
         super((JDialog) null, "LIMITE DE HORA/DIA", true);
 
@@ -27,8 +42,8 @@ public class LimiteHoraDialog extends JDialog {
                             this.input
                         ),
                     JPanel.createPanel(BoxLayout.X_AXIS, new Insets(5, 0, 0, 0),
-                            new JButton("Ok", getOkAction()),
-                            new JButton("Cancelar", getCancelarAction())
+                            new JButton("Ok", this.OKACTION),
+                            new JButton("Cancelar", this.CANCELARACTION)
                         )
                 ));
 
@@ -40,24 +55,5 @@ public class LimiteHoraDialog extends JDialog {
     public String run() {
         this.setVisible(true);
         return output;
-    }
-
-    private Action getOkAction(){
-        return new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                output = (String) input.getValue();
-                dispose();
-            }
-        };
-    }
-
-    private Action getCancelarAction(){
-        return new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                dispose();
-            }
-        };
     }
 }
