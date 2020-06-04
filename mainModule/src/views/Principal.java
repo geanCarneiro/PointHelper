@@ -38,7 +38,6 @@ public class Principal extends JFrame {
         public void actionPerformed(ActionEvent e) {
             int largura = 25;
             String info = setLengthToString("Inicio do Expediente", largura) + txtInicioExp.getText() + "\n";
-            System.out.println(txtInicioAlm.getValue());
             if(txtInicioAlm.getValue() != null){
                 info += setLengthToString("Inicio do Almoço", largura) + txtInicioAlm.getText() + "\n" +
                         setLengthToString("Fim do Almoço", largura) + txtFimAlm.getText() + "\n";
@@ -219,13 +218,18 @@ public class Principal extends JFrame {
 
     private void saveInfos(){
         try (FileWriter writer = new FileWriter(Main.BACKUP)){
-            writer.write(this.txtInicioExp.getText() + ";"
-                        + this.txtInicioAlm.getText() + ";"
-                        + this.txtFimAlm.getText() + ";"
-                        + this.txtFimExp.getText());
+            writer.write(getTextFromField(this.txtInicioExp) + ";"
+                           + getTextFromField(this.txtInicioAlm) + ";"
+                           + getTextFromField(this.txtFimAlm) + ";"
+                           + getTextFromField(this.txtFimExp)
+            );
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private String getTextFromField(JFormattedTextField field) {
+        return (field.getValue() == null) ? "" : field.getText();
     }
 
     private String setLengthToString(String str, int length) {

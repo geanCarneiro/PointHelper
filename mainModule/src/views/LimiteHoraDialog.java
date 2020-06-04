@@ -1,6 +1,5 @@
 package views;
 
-import com.sun.java.swing.action.OkAction;
 import customClass.JButton;
 import customClass.JFormattedTextField;
 import customClass.JLabel;
