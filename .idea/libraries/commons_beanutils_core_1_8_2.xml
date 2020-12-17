@@ -1,0 +1,15 @@
+<component name="libraryTable">
+  <library name="commons-beanutils-core-1.8.2">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../../tools/JxDataPicker_jars/commons-beanutils-core-1.8.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../tools/JxDataPicker_jars/commons-logging-1.1.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../tools/JxDataPicker_jars/databinding-1.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../tools/JxDataPicker_jars/filters-2.0.235.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../tools/JxDataPicker_jars/jxdatepicker-support-1.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../tools/JxDataPicker_jars/swing-worker-1.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../tools/JxDataPicker_jars/swingx-1.6.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

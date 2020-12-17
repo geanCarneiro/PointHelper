@@ -1,21 +1,27 @@
 package customClass;
 
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.text.DefaultFormatterFactory;
 import javax.swing.text.MaskFormatter;
 import java.awt.*;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.text.ParseException;
 
 public class JFormattedTextField extends javax.swing.JFormattedTextField {
 
     private static char placeHolder = '_';
-
     private String mask = "";
 
     public JFormattedTextField(){
+
         this.setPreferredSize(new Dimension(0, 30));
         this.setColumns(10);
+        this.setFocusLostBehavior(JFormattedTextField.COMMIT);
+
         this.addFocusListener(new FocusListener() {
             @Override
             public void focusGained(FocusEvent e) {
@@ -69,4 +75,12 @@ public class JFormattedTextField extends javax.swing.JFormattedTextField {
         }
     }
 
+    public String getValueAsString() {
+        try {
+            super.commitEdit();
+            return super.getValue().toString();
+        } catch (ParseException e) {
+            return null;
+        }
+    }
 }

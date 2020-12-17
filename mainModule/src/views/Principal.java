@@ -4,30 +4,34 @@ import customClass.JButton;
 import customClass.JFrame;
 import customClass.JPanel;
 import customClass.JLabel;
-import customClass.JTextField;
 import customClass.JFormattedTextField;
+import customClass.JXDatePicker;
 import main.Main;
+import persistencia.GenericDAO;
+import persistencia.Jornada;
+import persistencia.JornadaDAO;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.*;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.Scanner;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class Principal extends JFrame {
 
+    private JXDatePicker datePicker;
+    private JButton btnRemoverJornada;
     private JFormattedTextField txtInicioExp;
     private JFormattedTextField txtInicioAlm;
     private JFormattedTextField txtFimAlm;
@@ -94,19 +98,35 @@ public class Principal extends JFrame {
         }
     };
 
+    private final Action REMOVERJORNADA = new AbstractAction() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            if(!GenericDAO.isConnectionOpen()) return;
+
+            GenericDAO.delete(JornadaDAO.getByDate(datePicker.getStringDate()));
+            GenericDAO.commit();
+            loadInfo(null);
+        }
+    };
+
     public Principal() {
         super("PointHelper", false);
+        this.setResizable(false);
 
-        this.txtInicioExp = new JFormattedTextField(getFocusListener(), Main.TIMEMASK);
-        this.txtInicioAlm = new JFormattedTextField(getFocusListener(), Main.TIMEMASK);
-        this.txtFimAlm = new JFormattedTextField(getFocusListener(), Main.TIMEMASK);
-        this.txtFimExp = new JFormattedTextField(getFocusListener(), Main.TIMEMASK);
+        this.datePicker = new JXDatePicker(getDatePropertyChangeListener());
+        this.btnRemoverJornada = new JButton("Remover", REMOVERJORNADA);
+        this.txtInicioExp = new JFormattedTextField(getTextFocusListener(), Main.TIMEMASK);
+        this.txtInicioAlm = new JFormattedTextField(getTextFocusListener(), Main.TIMEMASK);
+        this.txtFimAlm = new JFormattedTextField(getTextFocusListener(), Main.TIMEMASK);
+        this.txtFimExp = new JFormattedTextField(getTextFocusListener(), Main.TIMEMASK);
 
         JLabel.defaultWidth = 145;
 
-        this.loadBackup();
-
         this.addComponent(JPanel.createPanel(BoxLayout.Y_AXIS, new Insets(10, 10, 10, 10),
+                JPanel.createPanel(BoxLayout.X_AXIS, new Insets(0, 0, 5, 0),
+                        new JLabel("data da jornada: "),
+                        this.datePicker
+                ),
                 JPanel.createPanel(BoxLayout.X_AXIS, new Insets(0, 0, 5, 0),
                         new JLabel("inicio do expediente: ", SwingConstants.RIGHT),
                         this.txtInicioExp,
@@ -125,17 +145,22 @@ public class Principal extends JFrame {
                         new JButton("Set", getSetTime(this.txtFimAlm)),
                         new JButton("Copiar", getCopyText(this.txtFimAlm))
                     ),
-                JPanel.createPanel(BoxLayout.X_AXIS, new Insets(0, 0, 5, 0),
+                JPanel.createPanel(BoxLayout.X_AXIS, new Insets(0, 0, 10, 0),
                         new JLabel("fim do expediente: ", SwingConstants.RIGHT),
                         this.txtFimExp,
                         new JButton("Set", getSetTime(this.txtFimExp)),
                         new JButton("Copiar", getCopyText(this.txtFimExp))
                     ),
-                JPanel.createPanel(BoxLayout.X_AXIS, new Insets(0, 0, 5, 0),
+                new JSeparator(),
+                JPanel.createPanel(BoxLayout.X_AXIS, new Insets(10, 0, 5, 0),
                         new JButton("Copiar Explicação", this.COPIAREXPLICACAOACTION),
-                        new JButton("Distribuir Horario...", this.DISTRIBUIRHORARIO)
+                        new JButton("Distribuir Horario...", this.DISTRIBUIRHORARIO),
+                        this.btnRemoverJornada
                 )
             ));
+
+        this.loadBackup();
+
         this.addWindowListener(this.getWindowListener());
     }
 
@@ -147,7 +172,7 @@ public class Principal extends JFrame {
         return String.format( "%02d:%02d", localDateTime.getHour(), localDateTime.getMinute() );
     }
 
-    private FocusListener getFocusListener(){
+    private FocusListener getTextFocusListener(){
         return new FocusListener() {
             @Override
             public void focusGained(FocusEvent e) {
@@ -156,7 +181,27 @@ public class Principal extends JFrame {
 
             @Override
             public void focusLost(FocusEvent e) {
-                saveInfos();
+                salvarJornada();
+            }
+        };
+    }
+
+    private PropertyChangeListener getDatePropertyChangeListener (){
+        return new PropertyChangeListener() {
+
+            @Override
+            public void propertyChange(PropertyChangeEvent evt) {
+                if(datePicker == null) return;
+                Date date = datePicker.getDate();
+                if(date != null) {
+                    String formattedDate = Main.SIMPLE_DATE_FORMAT.format(date);
+                    Jornada jornada = JornadaDAO.getByDate(getNow());
+                    if (jornada != null) {
+                        GenericDAO.delete(jornada);
+                        GenericDAO.commit();
+                    }
+                    loadInfo(GenericDAO.isConnectionOpen() ? JornadaDAO.getByDate(formattedDate) : null);
+                }
             }
         };
     }
@@ -170,10 +215,22 @@ public class Principal extends JFrame {
 
             @Override
             public void windowClosing(WindowEvent e) {
-                int opt = JOptionPane.showConfirmDialog(null, "Tem certeza que deseja fechar?", "ATENÇÃO", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-                if(opt == JOptionPane.YES_OPTION) {
-                    Main.BACKUP.delete();
+                if(!datePicker.getStringDate().equals(getNow()) || isJornadaValida()) {
                     System.exit(0);
+                } else {
+                    if(GenericDAO.isConnectionOpen()) {
+                        String msg = "A jornada está no formato invalido e, se fechar, ela será perdida.\n Tem certeza que deseja fechar?";
+                        int opt = JOptionPane.showConfirmDialog(null, msg, "ATENÇÃO", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                        if (opt == JOptionPane.YES_OPTION) {
+                                Jornada jornada = JornadaDAO.getByDate(getNow());
+                                if (jornada != null) {
+                                    GenericDAO.delete(jornada);
+                                    GenericDAO.commit();
+                                }
+                                GenericDAO.closeConnection();
+                            System.exit(0);
+                        }
+                    }
                 }
             }
 
@@ -184,7 +241,6 @@ public class Principal extends JFrame {
 
             @Override
             public void windowIconified(WindowEvent e) {
-                saveInfos();
             }
 
             @Override
@@ -199,37 +255,45 @@ public class Principal extends JFrame {
 
             @Override
             public void windowDeactivated(WindowEvent e) {
-                saveInfos();
             }
         };
     }
 
     private void loadBackup(){
-        try (Scanner scan = new Scanner(Main.BACKUP)) {
-            String[] infos = scan.nextLine().split(";");
-            if(infos.length > 0) this.txtInicioExp.setText(infos[0]);
-            if(infos.length > 1) this.txtInicioAlm.setText(infos[1]);
-            if(infos.length > 2) this.txtFimAlm.setText(infos[2]);
-            if(infos.length > 3) this.txtFimExp.setText(infos[3]);
-        } catch (FileNotFoundException e) {
-            this.saveInfos();
-        }
+
+        if (!GenericDAO.isConnectionOpen()) return;
+
+        loadInfo(JornadaDAO.getByDate(datePicker.getStringDate()));
     }
 
-    private void saveInfos(){
-        try (FileWriter writer = new FileWriter(Main.BACKUP)){
-            writer.write(getTextFromField(this.txtInicioExp) + ";"
-                           + getTextFromField(this.txtInicioAlm) + ";"
-                           + getTextFromField(this.txtFimAlm) + ";"
-                           + getTextFromField(this.txtFimExp)
-            );
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    private void loadInfo(Jornada jornada){
+
+        this.datePicker.setFlaggedDatesByJornadas(GenericDAO.query(Jornada.class));
+        this.btnRemoverJornada.setVisible(jornada != null);
+        this.txtInicioExp.setValue( (jornada == null) ? null : jornada.getInicioExpediente() );
+        this.txtInicioAlm.setValue( (jornada == null) ? null : jornada.getInicioAlmoco() );
+        this.txtFimAlm.setValue( (jornada == null) ? null : jornada.getFimAlmoco() );
+        this.txtFimExp.setValue( (jornada == null) ? null : jornada.getFimExpediente() );
+
     }
 
-    private String getTextFromField(JFormattedTextField field) {
-        return (field.getValue() == null) ? "" : field.getText();
+    private boolean salvarJornada(){
+        if(GenericDAO.isConnectionOpen()) {
+            Jornada novaJornada = new Jornada();
+            novaJornada.setData(this.datePicker.getStringDate());
+            novaJornada.setInicioExpediente(txtInicioExp.getValueAsString());
+            novaJornada.setInicioAlmoco(txtInicioAlm.getValueAsString());
+            novaJornada.setFimAlmoco(txtFimAlm.getValueAsString());
+            novaJornada.setFimExpediente(txtFimExp.getValueAsString());
+            novaJornada.calcularDuracao();
+
+            JornadaDAO.saveByDate(novaJornada);
+            GenericDAO.commit();
+            this.btnRemoverJornada.setVisible(isJornadaValida());
+            if(isJornadaValida()) this.datePicker.setFlaggedDatesByJornadas(GenericDAO.query(Jornada.class));
+            return true;
+        }
+        return false;
     }
 
     private String setLengthToString(String str, int length) {
@@ -249,7 +313,7 @@ public class Principal extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 target.setValue(new SimpleDateFormat("HH:mm").format(new Date()));
-                saveInfos();
+                salvarJornada();
             }
         };
     }
@@ -267,5 +331,20 @@ public class Principal extends JFrame {
         StringSelection selection = new StringSelection(str);
         Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
         clipboard.setContents(selection, selection);
+    }
+
+    private String getNow(){
+        return LocalDate.now().format(Main.DATEFORMATTER);
+    }
+
+    private boolean isJornadaValida(){
+        Jornada jornada = new Jornada();
+
+        jornada.setInicioExpediente(this.txtInicioExp.getValueAsString());
+        jornada.setInicioAlmoco(this.txtInicioAlm.getValueAsString());
+        jornada.setFimAlmoco(this.txtFimAlm.getValueAsString());
+        jornada.setFimExpediente(this.txtFimExp.getValueAsString());
+
+        return jornada.isJornadaValida();
     }
 }
