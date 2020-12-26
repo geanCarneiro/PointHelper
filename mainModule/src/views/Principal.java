@@ -196,7 +196,7 @@ public class Principal extends JFrame {
                 if(date != null) {
                     String formattedDate = Main.SIMPLE_DATE_FORMAT.format(date);
                     Jornada jornada = JornadaDAO.getByDate(getNow());
-                    if (jornada != null) {
+                    if (jornada != null && !jornada.isJornadaValida()) {
                         GenericDAO.delete(jornada);
                         GenericDAO.commit();
                     }
